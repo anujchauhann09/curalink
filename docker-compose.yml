@@ -1,0 +1,81 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: curalink-mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - curalink-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: curalink-redis
+    ports:
+      - '6379:6379'
+    networks:
+      - curalink-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ollama:
+    image: ollama/ollama
+    container_name: curalink-ollama
+    command: serve
+    ports:
+      - '11435:11434'
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - curalink-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    build: ./backend
+    container_name: curalink-backend
+    ports:
+      - '5000:5000'
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - curalink-net
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+  ollama-data:
+
+networks:
+  curalink-net:
+    driver: bridge
