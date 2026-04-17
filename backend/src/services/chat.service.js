@@ -5,6 +5,7 @@ const NotFoundError = require('../errors/NotFoundError');
 const { validate } = require('../pipeline/inputValidator');
 const { extract } = require('../pipeline/queryUnderstanding');
 const { expand } = require('../pipeline/queryExpansion');
+const { retrieve } = require('../retrieval');
 
 
 // chat service — orchestrates the full pipeline: validate → understand → expand → (retrieve → rank → LLM)
@@ -34,10 +35,16 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     content: query,
   });
 
-  // TODO phase 3: retrieval (PubMed + OpenAlex + ClinicalTrials) using expanded.broadQuery
+  // step 4 — parallel retrieval from PubMed + OpenAlex + ClinicalTrials
+  const { publications, trials, meta } = await retrieve({
+    broadQuery: expanded.broadQuery,
+    disease: input.disease,
+    location: input.location,
+  });
+
   // TODO phase 4: re-ranking retrieved results
   // TODO phase 5: LLM reasoning over ranked results
-  const reply = `[Phase 2 stub] Understood intent: "${expanded.intent}" for disease: "${expanded.disease}". Broad query: "${expanded.broadQuery}"`;
+  const reply = `[Phase 3 stub] Retrieved ${meta.totalPublications} publications and ${meta.totalTrials} trials in ${meta.retrievalTimeMs}ms.`;
 
   // persist assistant reply
   await sessionRepo.pushMessage(sid, {
@@ -49,6 +56,9 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     sessionId: sid,
     understood,
     expanded,
+    retrieval: meta,
+    publications,
+    trials,
     reply,
   };
 };
