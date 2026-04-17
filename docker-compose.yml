@@ -51,6 +51,20 @@ services:
       retries: 5
       start_period: 30s
 
+  # pulls the model into the shared volume on first run, then exits
+  # ollama-init:
+  #   image: ollama/ollama
+  #   container_name: curalink-ollama-init
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   networks:
+  #     - curalink-net
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   entrypoint: ["/bin/sh", "-c", "ollama pull ${OLLAMA_MODEL:-llama3}"]
+  #   restart: no
+
   backend:
     build: ./backend
     container_name: curalink-backend
