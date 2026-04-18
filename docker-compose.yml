@@ -46,10 +46,42 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  embedder:
+    build: ./embedder
+    container_name: curalink-embedder
+    ports:
+      - '8000:8000'
+    networks:
+      - curalink-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 30s
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: curalink-qdrant
+    ports:
+      - '6333:6333'
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - curalink-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/6333 && echo -e 'GET / HTTP/1.0\r\n\r\n' >&3 && cat <&3 | grep -q '200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   backend:
     build: ./backend
@@ -71,6 +103,10 @@ services:
         condition: service_healthy
       ollama:
         condition: service_started
+      embedder:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     networks:
       - curalink-net
     restart: unless-stopped
@@ -78,6 +114,7 @@ services:
 volumes:
   mongo-data:
   ollama-data:
+  qdrant-data:
 
 networks:
   curalink-net:

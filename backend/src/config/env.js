@@ -14,7 +14,9 @@ const env = {
   redisUrl: optional('REDIS_URL', 'redis://localhost:6379'),
   ollamaBaseUrl: optional('OLLAMA_BASE_URL', 'http://localhost:11434'),
   ollamaModel: optional('OLLAMA_MODEL', 'llama3'),
-  pubmedApiKey: optional('PUBMED_API_KEY', ''),
+  embedderUrl: optional('EMBEDDER_URL', 'http://localhost:8000'),
+  qdrantUrl: optional('QDRANT_URL', 'http://localhost:6333'),
+  qdrantCollection: optional('QDRANT_COLLECTION', 'medical-research'),
   isDev: optional('NODE_ENV', 'development') === 'development',
 };
 

@@ -6,6 +6,7 @@ const { validate } = require('../pipeline/inputValidator');
 const { extract } = require('../pipeline/queryUnderstanding');
 const { expand } = require('../pipeline/queryExpansion');
 const { retrieve } = require('../retrieval');
+const { rank } = require('../pipeline/ranker');
 
 
 // chat service — orchestrates the full pipeline: validate → understand → expand → (retrieve → rank → LLM)
@@ -42,11 +43,19 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     location: input.location,
   });
 
-  // TODO phase 4: re-ranking retrieved results
-  // TODO phase 5: LLM reasoning over ranked results
-  const reply = `[Phase 3 stub] Retrieved ${meta.totalPublications} publications and ${meta.totalTrials} trials in ${meta.retrievalTimeMs}ms.`;
+  // step 5 — rank: score-based + optional semantic re-ranking via Qdrant
+  const { publications: topPublications, trials: topTrials } = await rank({
+    publications,
+    trials,
+    query: input.query,
+    disease: input.disease,
+    location: input.location,
+    focusedQuery: expanded.focusedQuery,
+  });
 
-  // persist assistant reply
+  // TODO phase 5: LLM reasoning over ranked results
+  const reply = `[Phase 4 stub] Ranked to top ${topPublications.length} publications and ${topTrials.length} trials from ${meta.totalPublications + meta.totalTrials} candidates.`;
+
   await sessionRepo.pushMessage(sid, {
     role: MESSAGE_ROLES.ASSISTANT,
     content: reply,
@@ -57,8 +66,8 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     understood,
     expanded,
     retrieval: meta,
-    publications,
-    trials,
+    publications: topPublications,
+    trials: topTrials,
     reply,
   };
 };
