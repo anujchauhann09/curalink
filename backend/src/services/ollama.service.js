@@ -83,8 +83,13 @@ const parseSynonyms = (raw) => {
 const generate = async (prompt) => {
   const response = await axios.post(
     `${env.ollamaBaseUrl}/api/generate`,
-    { model: env.ollamaModel, prompt, stream: false },
-    { timeout: 60000 }
+    {
+      model: env.ollamaModel,
+      prompt,
+      stream: false,
+      options: { temperature: 0.3, num_predict: 1024 }, // cap output tokens
+    },
+    { timeout: 180000 } // 3 min
   );
   return response.data?.response || '';
 };

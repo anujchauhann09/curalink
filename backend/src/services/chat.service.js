@@ -7,6 +7,9 @@ const { extract } = require('../pipeline/queryUnderstanding');
 const { expand } = require('../pipeline/queryExpansion');
 const { retrieve } = require('../retrieval');
 const { rank } = require('../pipeline/ranker');
+const { build: buildPrompt } = require('../pipeline/promptBuilder');
+const { parse: parseResponse } = require('../pipeline/responseParser');
+const ollamaService = require('./ollama.service');
 
 
 // chat service — orchestrates the full pipeline: validate → understand → expand → (retrieve → rank → LLM)
@@ -24,11 +27,29 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
   const sid = input.sessionId || uuidv4();
 
   // ensure session exists with user context
+  // on follow-up turns, inherit disease/location from existing session
+  let sessionDisease = input.disease;
+  let sessionLocation = input.location;
+
+  if (input.sessionId) {
+    const existing = await sessionRepo.findById(input.sessionId);
+    if (existing) {
+      sessionDisease = input.disease || existing.disease;
+      sessionLocation = input.location || existing.location;
+    }
+  }
+
   await sessionRepo.findOrCreate({
     sessionId: sid,
-    disease: input.disease,
-    location: input.location,
+    disease: sessionDisease,
+    location: sessionLocation,
   });
+
+  // re-inject resolved context so downstream pipeline uses correct disease
+  input.disease = sessionDisease;
+  input.location = sessionLocation;
+  understood.disease = sessionDisease;
+  understood.location = sessionLocation;
 
   // persist user query as message
   await sessionRepo.pushMessage(sid, {
@@ -39,8 +60,8 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
   // step 4 — parallel retrieval from PubMed + OpenAlex + ClinicalTrials
   const { publications, trials, meta } = await retrieve({
     broadQuery: expanded.broadQuery,
-    disease: input.disease,
-    location: input.location,
+    disease: sessionDisease,
+    location: sessionLocation,
   });
 
   // step 5 — rank: score-based + optional semantic re-ranking via Qdrant
@@ -48,17 +69,36 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     publications,
     trials,
     query: input.query,
-    disease: input.disease,
-    location: input.location,
+    disease: sessionDisease,
+    location: sessionLocation,
     focusedQuery: expanded.focusedQuery,
   });
 
-  // TODO phase 5: LLM reasoning over ranked results
-  const reply = `[Phase 4 stub] Ranked to top ${topPublications.length} publications and ${topTrials.length} trials from ${meta.totalPublications + meta.totalTrials} candidates.`;
+  // step 6 — fetch conversation history for context continuity
+  const session = await sessionRepo.findById(sid);
+  const conversationHistory = session?.messages?.slice(-6) || [];
+
+  // step 7 — build prompt and generate LLM response
+  const prompt = buildPrompt({
+    disease: sessionDisease,
+    query: input.query,
+    location: sessionLocation,
+    publications: topPublications,
+    trials: topTrials,
+    conversationHistory,
+  });
+
+  const rawLLMResponse = await ollamaService.generate(prompt);
+
+  // step 8 — parse structured response from LLM output
+  const structured = parseResponse(rawLLMResponse, {
+    publications: topPublications,
+    trials: topTrials,
+  });
 
   await sessionRepo.pushMessage(sid, {
     role: MESSAGE_ROLES.ASSISTANT,
-    content: reply,
+    content: structured.conditionOverview || rawLLMResponse,
   });
 
   return {
@@ -66,9 +106,7 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     understood,
     expanded,
     retrieval: meta,
-    publications: topPublications,
-    trials: topTrials,
-    reply,
+    response: structured,
   };
 };
 
