@@ -39,6 +39,7 @@ const extractFallback = (text, index) => {
 const formatSources = (publications, trials) => {
   const pubSources = publications.slice(0, 6).map((p) => ({
     title: p.title,
+    summary: p.summary || '',
     authors: p.authors?.slice(0, 3) || [],
     year: p.year,
     source: p.source,
@@ -48,7 +49,11 @@ const formatSources = (publications, trials) => {
 
   const trialSources = trials.slice(0, 4).map((t) => ({
     title: t.title,
+    summary: t.summary || '',
     status: t.status,
+    phase: t.phase || null,
+    locations: t.locations || [],
+    contact: t.contact || null,
     source: t.source,
     url: t.url,
     type: 'trial',

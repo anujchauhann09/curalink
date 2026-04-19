@@ -21,13 +21,9 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
   // step 2 — extract structured understanding (intent, disease, location)
   const understood = extract(input);
 
-  // step 3 — expand query with LLM synonyms (cached) + static intent keywords
-  const expanded = await expand(understood);
-
   const sid = input.sessionId || uuidv4();
 
-  // ensure session exists with user context
-  // on follow-up turns, inherit disease/location from existing session
+  // resolve disease/location from session on follow-up turns
   let sessionDisease = input.disease;
   let sessionLocation = input.location;
 
@@ -39,17 +35,20 @@ const processMessage = async ({ disease, query, location, sessionId }) => {
     }
   }
 
+  // re-inject resolved context before expansion
+  input.disease = sessionDisease;
+  input.location = sessionLocation;
+  understood.disease = sessionDisease;
+  understood.location = sessionLocation;
+
+  // step 3 — expand query with LLM synonyms (cached) + static intent keywords
+  const expanded = await expand(understood);
+
   await sessionRepo.findOrCreate({
     sessionId: sid,
     disease: sessionDisease,
     location: sessionLocation,
   });
-
-  // re-inject resolved context so downstream pipeline uses correct disease
-  input.disease = sessionDisease;
-  input.location = sessionLocation;
-  understood.disease = sessionDisease;
-  understood.location = sessionLocation;
 
   // persist user query as message
   await sessionRepo.pushMessage(sid, {
