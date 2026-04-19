@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-surface: #F8FAFC;
+    --color-card: #FFFFFF;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #64748B;
+    --color-border: #E2E8F0;
+    --color-input-bg: #FFFFFF;
+    --color-skeleton: #F1F5F9;
+    --color-nav-bg: rgba(255, 255, 255, 0.85);
+    --color-chat-bubble-ai: #FFFFFF;
+    --color-recommendation-bg: rgba(239, 246, 255, 0.6);
+  }
+
+  .dark {
+    --color-surface: #0F172A;
+    --color-card: #1E293B;
+    --color-text-primary: #F1F5F9;
+    --color-text-secondary: #94A3B8;
+    --color-border: #334155;
+    --color-input-bg: #1E293B;
+    --color-skeleton: #334155;
+    --color-nav-bg: rgba(15, 23, 42, 0.85);
+    --color-chat-bubble-ai: #1E293B;
+    --color-recommendation-bg: rgba(30, 58, 138, 0.15);
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  input,
+  button,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-input-bg);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+  }
+
+  .input-field::placeholder {
+    color: var(--color-text-secondary);
+  }
+
+  .input-field:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .input-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: #2563EB;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    border: none;
+    transition: background-color 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: #1d4ed8;
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .card {
+    background-color: var(--color-card);
+    border-radius: 16px;
+    box-shadow: var(--tw-shadow, 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04));
+    padding: 1.5rem;
+  }
+
+  .dark .card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+  }
+
+  .skeleton-line {
+    background-color: var(--color-skeleton);
+    border-radius: 8px;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (max-width: 374px) {
+  .card {
+    padding: 1rem;
+  }
+}
